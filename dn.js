@@ -4,7 +4,7 @@ function executeHttpRequest (action, method, body, callback) {
     jQuery.ajax({
         method: method,
         url: httpBase + action,
-        complete: callback,
+        success: callback,
         data: body,
         dataType: "json",
         error: function (jqXHR, status, error) {
@@ -13,44 +13,57 @@ function executeHttpRequest (action, method, body, callback) {
     });
 }
 
-function login (username, password, rememberMe) {
-    executeHttpRequest("login", "POST", { username: username, password: password, rememberMe: rememberMe }, function (response) {
+function login (username, password, rememberMe, callback) {
+    executeHttpRequest("login", "POST", { username: username, password: password, rememberMe: rememberMe }, callback);
+}
+
+function isLoggedIn (callback) {
+    executeHttpRequest("logged_in", "GET", {}, callback);
+}
+
+function forgotPassword (email, callback) {
+    executeHttpRequest("forgot_password", "POST", { email: email }, callback);
+}
+
+function logout (callback) {
+    executeHttpRequest("logout", "POST", {}, callback);
+}
+
+function register (username, password, email, callback) {
+    executeHttpRequest("register", "POST", { username: username, password: password, email: email }, callback);
+}
+
+function duelServerLogin (loginToken, adminStatus, isAdminNormalUser) {
+    console.log(loginToken, adminStatus, isAdminNormalUser);
+}    
+
+$(function () {
+    isLoggedIn(function (response) {
         console.log(response);
         if (response.success) {
-            console.log("Server processed request.");
-        } else {
-            console.error("Encountered error: ", error);
-        }
-    });
-}
-
-function isLoggedIn () {
-    executeHttpRequest("logged_in", "GET", {}, function (response) {
-        if (response.success) {
-            console.log("Server processed request.");
-            if (response.username) {
-                console.log("We're also logged in. Handle this!");
+            var canLogIn = true;
+            console.log("Server didn't throw an error.");
+            if (undefined !== response.username) {
+                console.log("User is already logged in. Check if he's not banned or hasn't confirmed his email.");
+                if (response.banned) {
+                    canLogIn = false;
+                    console.log("You are banned!");
+                }
+                if (!response.confirmed) {
+                    canLogIn = false;
+                    console.log("Confirm your mail first. Resend confirmation mail?");
+                }
+                if (response.firstLogin) {
+                    console.log("Welcome to DN. I hope you enjoy your stay here. - Black Luster Soldier");
+                }
+            } else {
+                canLogIn = false;
+            }
+            if (canLogIn) {
+                duelServerLogin(response.loginToken, response.admin, true); // TODO: figure out a better way to make a switch button for admins available
             }
         } else {
-            console.error("Encountered error: ", error);
+            console.error("Server encountered an error when logging in: ", response.error);
         }
     });
-}
-
-function forgotPassword (email) {
-    executeHttpRequest("forgot_password", "POST", { email: email }, function (response) {
-        // handle forgot password response
-    });
-}
-
-function logout () {
-    executeHttpRequest("logout", "POST", {}, function (response) {
-        // handle logout
-    });
-}
-
-function register (username, password, email) {
-    executeHttpRequest("register", "POST", { username: username, password: password, email: email }, function (response) {
-        // handle register
-    });
-}
+});
